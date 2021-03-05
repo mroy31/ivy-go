@@ -24,7 +24,8 @@ in this implementation:
 - `IvyBindDirectMsg`
 - `IvySendDirectMsg`
 
-Example:
+Example
+-------
 
 ```go
 package main
@@ -61,3 +62,10 @@ func main() {
 ```
 
 A more complete example is available in the `example` directory.
+
+License
+-------
+
+GNU General Public License v3.0 or later
+
+See [COPYING](COPYING) to see the full text.
