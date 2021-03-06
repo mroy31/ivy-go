@@ -106,7 +106,7 @@ func (c *AgentT) addSubscription(subId int, subRegExp string) {
 		return
 	}
 
-	logrus.Debugf("Add regexp %d - %s", subId, subRegExp)
+	c.Logger.Debugf("Add regexp %d - %s", subId, subRegExp)
 	c.Subscriptions = append(c.Subscriptions, SubscriptionT{
 		Re:   re,
 		Text: subRegExp,
@@ -169,7 +169,7 @@ func (c *AgentT) handleMsg() {
 }
 
 func (c *AgentT) processMsg(raw string) {
-	logrus.Debugf("Receive raw msg: %s", raw)
+	c.Logger.Debugf("Receive raw msg: %s", raw)
 
 	msg, err := decodeIvyMsg(raw)
 	if err != nil {

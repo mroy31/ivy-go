@@ -288,7 +288,7 @@ func (b *BusT) registerAgent(appId, appName string, conn net.Conn) error {
 		Subscriptions:   make([]SubscriptionT, 0),
 		Bus:             b,
 		State:           AGENT_NOT_INIT,
-		Logger:          logrus.WithField("name", appName),
+		Logger:          b.Logger.WithField("name", appName),
 	}
 
 	if err := agent.Init(); err != nil {

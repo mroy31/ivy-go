@@ -39,12 +39,17 @@ const (
 var (
 	state BusState = CLOSE
 	bus   *BusT
+	log   = logrus.New()
 )
 
+func GetLogger() *logrus.Logger {
+	return log
+}
+
 func SetLogger(w io.Writer, level logrus.Level) {
-	logrus.SetFormatter(&logrus.TextFormatter{})
-	logrus.SetOutput(w)
-	logrus.SetLevel(level)
+	log.SetFormatter(&logrus.TextFormatter{})
+	log.SetOutput(w)
+	log.SetLevel(level)
 }
 
 func IvyInit(agentName, readyMsg string, mainLoop int, onCnxFunc, onDieFunc IvyAppCallback) error {
@@ -59,7 +64,7 @@ func IvyInit(agentName, readyMsg string, mainLoop int, onCnxFunc, onDieFunc IvyA
 		OnDieFunc:       onDieFunc,
 		SubcriptionLock: &sync.Mutex{},
 		Subscriptions:   make([]SubscriptionT, 0),
-		Logger:          logrus.WithField("bus", agentName),
+		Logger:          log.WithField("ivy", agentName),
 	}
 	state = INIT
 	return nil
