@@ -147,6 +147,10 @@ func IvyGetApplicationByName(appName string) (IvyApplication, error) {
 	}
 
 	for _, agent := range bus.Agents {
+		if agent.State != AGENT_INIT {
+			continue
+		}
+
 		if agent.Name == appName {
 			return IvyApplication{agent.ID, agent.Name, agent.AgentID}, nil
 		}
@@ -156,17 +160,21 @@ func IvyGetApplicationByName(appName string) (IvyApplication, error) {
 }
 
 func IvyGetApplicationList() ([]IvyApplication, error) {
-	list := make([]IvyApplication, len(bus.Agents))
+	list := make([]IvyApplication, 0)
 	if state == CLOSE {
 		return list, fmt.Errorf("The bus is not initialized, call IvyInit first")
 	}
 
-	for idx, agent := range bus.Agents {
-		list[idx] = IvyApplication{
+	for _, agent := range bus.Agents {
+		if agent.State != AGENT_INIT {
+			continue
+		}
+
+		list = append(list, IvyApplication{
 			ID:      agent.ID,
 			AgentId: agent.AgentID,
 			Name:    agent.Name,
-		}
+		})
 	}
 
 	return list, nil

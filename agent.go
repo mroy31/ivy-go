@@ -187,13 +187,13 @@ func (c *AgentT) processMsg(raw string) {
 			c.Logger = c.Logger.WithField("name", c.Name)
 		}
 	case END_REGEXP:
-		c.State = AGENT_INIT
 		if c.Bus.OnCnxFunc != nil {
 			go c.Bus.OnCnxFunc(IvyApplication{c.ID, c.Name, c.AgentID})
 		}
 		if c.Bus.ReadyMsg != "" {
 			c.SendMsg(c.Bus.ReadyMsg)
 		}
+		c.State = AGENT_INIT
 	case ADD_REGEXP:
 		if len(msg.Params) == 0 {
 			c.Logger.Errorf("Receive ADD_REGEXP message without rexgexp param")
