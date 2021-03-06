@@ -34,6 +34,7 @@ func (c *AgentT) Init() error {
 	c.Bus.SubcriptionLock.Lock()
 	defer c.Bus.SubcriptionLock.Unlock()
 
+	c.MsgCh = make(chan MessageT, 1)
 	if _, err := c.Conn.Write(encogeIvyMsg(MessageT{
 		Type:   START_REGEXP,
 		NumId:  c.Bus.GetBusPort(),
@@ -65,6 +66,8 @@ func (c *AgentT) Init() error {
 }
 
 func (c *AgentT) SendMsg(msg string) {
+	c.Logger.Debugf("Send message %s", msg)
+
 	c.SubcriptionLock.Lock()
 	defer c.SubcriptionLock.Unlock()
 
@@ -83,6 +86,7 @@ func (c *AgentT) SendMsg(msg string) {
 }
 
 func (c *AgentT) SendDirectMsg(numId int, msg string) {
+	c.Logger.Debugf("Send direct message %d - %s", numId, msg)
 	c.MsgCh <- MessageT{DIRECT_MSG, numId, []string{msg}}
 }
 
@@ -134,7 +138,6 @@ func (c *AgentT) removeSubscription(subId int) {
 
 func (c *AgentT) handleMsg() {
 	go func() {
-		c.MsgCh = make(chan MessageT)
 		for {
 			msg, ok := <-c.MsgCh
 			if !ok {
@@ -186,7 +189,7 @@ func (c *AgentT) processMsg(raw string) {
 	case END_REGEXP:
 		c.State = AGENT_INIT
 		if c.Bus.OnCnxFunc != nil {
-			c.Bus.OnCnxFunc(IvyApplication{c.ID, c.Name, c.AgentID})
+			go c.Bus.OnCnxFunc(IvyApplication{c.ID, c.Name, c.AgentID})
 		}
 		if c.Bus.ReadyMsg != "" {
 			c.SendMsg(c.Bus.ReadyMsg)
@@ -205,7 +208,7 @@ func (c *AgentT) processMsg(raw string) {
 			return
 		}
 		if c.Bus.DirectMsgCb != nil {
-			c.Bus.DirectMsgCb(
+			go c.Bus.DirectMsgCb(
 				IvyApplication{c.ID, c.Name, c.AgentID},
 				msg.NumId, msg.Params[0])
 		}
@@ -215,7 +218,7 @@ func (c *AgentT) processMsg(raw string) {
 
 		for _, sub := range c.Bus.Subscriptions {
 			if sub.Id == msg.NumId {
-				sub.Cb(IvyApplication{c.ID, c.Name, c.AgentID}, msg.Params)
+				go sub.Cb(IvyApplication{c.ID, c.Name, c.AgentID}, msg.Params)
 			}
 		}
 	case BYE:

@@ -315,7 +315,7 @@ func (b *BusT) unregisterAgent(client *AgentT) {
 		b.Agents = b.Agents[:len(b.Agents)-1]
 
 		if b.OnDieFunc != nil {
-			b.OnDieFunc(IvyApplication{client.ID, client.Name, client.AgentID})
+			go b.OnDieFunc(IvyApplication{client.ID, client.Name, client.AgentID})
 		}
 	}
 }
