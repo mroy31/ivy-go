@@ -6,16 +6,25 @@ import (
 	"math/rand"
 	"net"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 )
+
+func parseBusId(busId string) (net.IP, int, error) {
+	re := regexp.MustCompile(`^([\d|\.]+):(\d+)$`)
+
+	groups := re.FindStringSubmatch(busId)
+	if groups == nil {
+		return nil, -1, fmt.Errorf("Bus id %s is not valid, <ip_adress>:port expected", busId)
+	}
+
+	port, _ := strconv.Atoi(groups[2])
+	return net.ParseIP(groups[1]), port, nil
+}
 
 var (
 	subId           = 0
@@ -177,25 +186,16 @@ func (b *BusT) serve() error {
 
 func (b *BusT) serveUDPDiscovery(busId string, tcpPort int) error {
 	b.Logger.Debugf("UDP: Start Server in %s", busId)
-	lc := net.ListenConfig{
-		Control: func(network, address string, c syscall.RawConn) error {
-			var opErr error
-			err := c.Control(func(fd uintptr) {
-				opErr = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
-				if opErr != nil && runtime.GOOS == "linux" {
-					opErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
-				}
-			})
-			if err != nil {
-				return err
-			}
-			return opErr
-		},
+
+	_, port, err := parseBusId(busId)
+	if err != nil {
+		return err
 	}
 
-	lp, err := lc.ListenPacket(context.Background(), "udp", busId)
+	lc := b.getUDPConfig()
+	lp, err := lc.ListenPacket(context.Background(), "udp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		return fmt.Errorf("Unable to listen on %s: %w", busId, err)
+		return fmt.Errorf("Unable to listen on ':%d': %w", port, err)
 	}
 	b.UDPConn = lp.(*net.UDPConn)
 
@@ -278,6 +278,8 @@ func (b *BusT) ConnectToClient(addr string, port int, appName, appId string) err
 }
 
 func (b *BusT) registerAgent(appId, appName string, conn net.Conn) error {
+	b.Logger.Debugf("Register new agent - %s", appName)
+
 	agentInternalId++
 	agent := &AgentT{
 		ID:              agentInternalId,
