@@ -141,6 +141,20 @@ func IvySendDirectMsg(agentId int, numId int, msg string) error {
 	return nil
 }
 
+func IvyGetApplicationByName(appName string) (IvyApplication, error) {
+	if state == CLOSE {
+		return IvyApplication{}, fmt.Errorf("The bus is not initialized, call IvyInit first")
+	}
+
+	for _, agent := range bus.Agents {
+		if agent.Name == appName {
+			return IvyApplication{agent.ID, agent.Name, agent.AgentID}, nil
+		}
+	}
+
+	return IvyApplication{}, fmt.Errorf("Application %s not found", appName)
+}
+
 func IvyGetApplicationList() ([]IvyApplication, error) {
 	list := make([]IvyApplication, len(bus.Agents))
 	if state == CLOSE {
