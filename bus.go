@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/net/ipv4"
 )
 
 func parseBusId(busId string) (net.IP, int, error) {
@@ -187,7 +188,7 @@ func (b *BusT) serve() error {
 func (b *BusT) serveUDPDiscovery(busId string, tcpPort int) error {
 	b.Logger.Debugf("UDP: Start Server in %s", busId)
 
-	_, port, err := parseBusId(busId)
+	busAddr, port, err := parseBusId(busId)
 	if err != nil {
 		return err
 	}
@@ -198,6 +199,22 @@ func (b *BusT) serveUDPDiscovery(busId string, tcpPort int) error {
 		return fmt.Errorf("Unable to listen on ':%d': %w", port, err)
 	}
 	b.UDPConn = lp.(*net.UDPConn)
+
+	if busAddr.IsMulticast() {
+		b.Logger.Debugf("Bus address %s is Multicast, join group on all interfaces", busAddr.String())
+
+		p := ipv4.NewPacketConn(b.UDPConn)
+		ifList, err := net.Interfaces()
+		if err != nil {
+			return fmt.Errorf("Unable to get net interface list: %w", err)
+		}
+
+		for _, ifEntry := range ifList {
+			if err := p.JoinGroup(&ifEntry, &net.UDPAddr{IP: busAddr}); err != nil {
+				b.Logger.Errorf("Unable to join group %s on interface %s: %v", busAddr.String(), ifEntry.Name, err)
+			}
+		}
+	}
 
 	go func() {
 		buffer := make([]byte, 1024)
