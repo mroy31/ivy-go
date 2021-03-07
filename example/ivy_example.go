@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"time"
 
@@ -9,7 +10,8 @@ import (
 )
 
 var (
-	busId = "127.255.255.255:2010"
+	busId   = flag.String("bus", "127.255.255.255", "Ivy bus Id")
+	verbose = flag.Bool("verbose", false, "Display debug messages")
 )
 
 func OnAppConnect(agent ivy.IvyApplication) {
@@ -25,14 +27,19 @@ func OnMsg(agent ivy.IvyApplication, params []string) {
 }
 
 func main() {
+	flag.Parse()
 	ivy.SetLogger(os.Stderr, logrus.InfoLevel)
+	if *verbose {
+		ivy.SetLogger(os.Stderr, logrus.DebugLevel)
+	}
+
 	if err := ivy.IvyInit("ivy-go-example", "Ready", 0, OnAppConnect, OnAppDie); err != nil {
 		logrus.Fatalf("Unable to init ivy bus: %v", err)
 	}
 
 	ivy.IvyBindMsg(OnMsg, "(.*)")
 
-	if err := ivy.IvyStart(busId); err != nil {
+	if err := ivy.IvyStart(*busId); err != nil {
 		logrus.Fatalf("Unable to start ivy bus: %v", err)
 	}
 	time.Sleep(1 * time.Second)
