@@ -24,6 +24,8 @@ in this implementation:
 - `IvyBindDirectMsg`
 - `IvySendDirectMsg`
 
+Moreover, only IPv4 is supported for now (no IPv6 support).
+
 Example
 -------
 

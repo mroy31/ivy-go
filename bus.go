@@ -185,6 +185,24 @@ func (b *BusT) serve() error {
 	return nil
 }
 
+func (b *BusT) joinMulticastGroup(lp net.PacketConn, busAddr net.IP) {
+	p := ipv4.NewPacketConn(lp)
+	ifList, err := net.Interfaces()
+	if err != nil {
+		b.Logger.Errorf("Unable to get net interface list: %v", err)
+		return
+	}
+
+	for _, ifEntry := range ifList {
+		if (ifEntry.Flags & net.FlagMulticast) > 0 {
+			b.Logger.Debugf("Join Multicast group %s in interface %s", busAddr.String(), ifEntry.Name)
+			if err := p.JoinGroup(&ifEntry, &net.UDPAddr{IP: busAddr.To4()}); err != nil {
+				b.Logger.Errorf("Unable to join group %s on interface %s: %v", busAddr.String(), ifEntry.Name, err)
+			}
+		}
+	}
+}
+
 func (b *BusT) serveUDPDiscovery(busId string, tcpPort int) error {
 	b.Logger.Debugf("UDP: Start Server in %s", busId)
 
@@ -194,7 +212,7 @@ func (b *BusT) serveUDPDiscovery(busId string, tcpPort int) error {
 	}
 
 	lc := b.getUDPConfig()
-	lp, err := lc.ListenPacket(context.Background(), "udp", fmt.Sprintf(":%d", port))
+	lp, err := lc.ListenPacket(context.Background(), "udp4", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return fmt.Errorf("Unable to listen on ':%d': %w", port, err)
 	}
@@ -202,18 +220,7 @@ func (b *BusT) serveUDPDiscovery(busId string, tcpPort int) error {
 
 	if busAddr.IsMulticast() {
 		b.Logger.Debugf("Bus address %s is Multicast, join group on all interfaces", busAddr.String())
-
-		p := ipv4.NewPacketConn(b.UDPConn)
-		ifList, err := net.Interfaces()
-		if err != nil {
-			return fmt.Errorf("Unable to get net interface list: %w", err)
-		}
-
-		for _, ifEntry := range ifList {
-			if err := p.JoinGroup(&ifEntry, &net.UDPAddr{IP: busAddr}); err != nil {
-				b.Logger.Errorf("Unable to join group %s on interface %s: %v", busAddr.String(), ifEntry.Name, err)
-			}
-		}
+		b.joinMulticastGroup(lp, busAddr)
 	}
 
 	go func() {
